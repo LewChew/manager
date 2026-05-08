@@ -367,7 +367,7 @@ jobs:
 
   publish-packages:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' && github.repository == 'linode/manager'
     needs:
       - build-sdk
       - build-validation
@@ -438,7 +438,7 @@ jobs:
 
   publish-storybook:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' && github.repository == 'linode/manager'
     needs: build-storybook
     steps:
       - uses: actions/checkout@v4
