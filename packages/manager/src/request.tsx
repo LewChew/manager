@@ -1,11 +1,9 @@
 import { baseRequest } from '@linode/api-v4/lib/request';
-import { AxiosHeaders } from 'axios';
 
-import { ACCESS_TOKEN, API_ROOT, DEFAULT_ERROR_MESSAGE } from 'src/constants';
+import { API_ROOT, DEFAULT_ERROR_MESSAGE } from 'src/constants';
 import { setErrors } from 'src/store/globalErrors/globalErrors.actions';
 
-import { clearAuthDataFromLocalStorage, redirectToLogin } from './OAuth/oauth';
-import { getEnvLocalStorageOverrides, storage } from './utilities/storage';
+import { getEnvLocalStorageOverrides } from './utilities/storage';
 
 import type { ApplicationStore } from './store';
 import type { APIError, Profile } from '@linode/api-v4';
@@ -24,31 +22,10 @@ const handleSuccess: <T extends AxiosResponse<any>>(response: T) => T | T = (
 // All errors returned by the actual Linode API are in this shape.
 export type LinodeError = { errors: APIError[] };
 
-/**
- * Exists to prevent the async `redirectToLogin` function from being called many times
- * when many 401 API errors are handled at the same time.
- *
- * Without this, `redirectToLogin` may be invoked many times before navigation to login actually happens,
- * which results in the nonce and code verifier being re-generated, leading to authentication race conditions.
- */
-let isRedirectingToLogin = false;
-
 export const handleError = (
   error: AxiosError<LinodeError>,
   store: ApplicationStore
 ) => {
-  if (
-    error.response &&
-    error.response.status === 401 &&
-    !store.getState().pendingUpload &&
-    !isRedirectingToLogin &&
-    window.location.pathname !== '/oauth/callback'
-  ) {
-    isRedirectingToLogin = true;
-    clearAuthDataFromLocalStorage();
-    redirectToLogin();
-  }
-
   const status: number = error.response?.status ?? 0;
   const errors: APIError[] = error.response?.data?.errors ?? [
     { reason: DEFAULT_ERROR_MESSAGE },
@@ -169,50 +146,23 @@ export const injectEuuidToProfile = (
   return response;
 };
 
-export const setupInterceptors = (store: ApplicationStore) => {
-  baseRequest.interceptors.request.use(async (config) => {
-    if (
-      window.location.pathname === '/oauth/callback' ||
-      window.location.pathname === '/admin/callback'
-    ) {
-      throw new Error(
-        'API calls blocked during authentication callback processing'
-      );
-    }
+export const setupInterceptors = (_store: ApplicationStore) => {
+  baseRequest.interceptors.request.use((config) => ({
+    ...config,
+    url: getURL(config),
+  }));
 
-    const url = getURL(config);
-
-    const headers = new AxiosHeaders(config.headers);
-
-    // If headers are explicitly passed to our endpoint via
-    // setHeaders(), we don't want this overridden.
-    const hasExplicitAuthToken = headers.hasAuthorization();
-
-    const token = ACCESS_TOKEN ?? storage.authentication.token.get() ?? null;
-    const bearer = hasExplicitAuthToken ? headers.getAuthorization() : token;
-
-    headers.setAuthorization(bearer);
-
-    return {
-      ...config,
-      headers,
-      url,
-    };
-  });
-
-  /*
-  Interceptor that:
-    * initiates re-authentication if the response is HTTP 401 "Unauthorized"
-    * displays a Maintenance view if the API is in Maintenance mode
-  Also rejects non-error responses if the API is in Maintenance mode
-  */
-  baseRequest.interceptors.response.use(
-    handleSuccess,
-    (error: AxiosError<LinodeError>) => handleError(error, store)
+  // POC mode: silently swallow all API errors so unmocked endpoints don't blow up the UI.
+  baseRequest.interceptors.response.use(handleSuccess, (error: AxiosError) =>
+    Promise.resolve({
+      data: null,
+      status: error.response?.status ?? 0,
+      statusText: error.response?.statusText ?? '',
+      headers: error.response?.headers ?? {},
+      config: error.config ?? {},
+    })
   );
 
   baseRequest.interceptors.response.use(injectAkamaiAccountHeader);
-
-  // Inject the EUUID from the X-Customer-Uuid header into the profile response
   baseRequest.interceptors.response.use(injectEuuidToProfile);
 };

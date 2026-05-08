@@ -4,8 +4,7 @@ import * as React from 'react';
 
 /**
  * This hook is responsible for making Cloud Manager's initial requests.
- * It exposes a `isLoading` value so that we can render a loading page
- * as we make our inital requests.
+ * POC mode: seeds query cache with mock data instead of calling the API.
  */
 export const useInitialRequests = () => {
   const queryClient = useQueryClient();
@@ -13,34 +12,60 @@ export const useInitialRequests = () => {
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
-    makeInitialRequests();
+    // Seed query cache with mock data for POC
+    queryClient.setQueryData(accountQueries.account.queryKey, {
+      active_promotions: [],
+      active_since: '2024-01-01T00:00:00',
+      address_1: '',
+      address_2: '',
+      balance: 0,
+      balance_uninvoiced: 0,
+      billing_source: 'linode',
+      capabilities: [
+        'Linodes', 'NodeBalancers', 'Block Storage', 'Object Storage',
+        'Kubernetes', 'Cloud Firewall', 'Vlans', 'VPCs', 'Placement Group',
+        'Databases',
+      ],
+      city: '',
+      company: '',
+      country: 'US',
+      credit_card: { expiry: '01/2030', last_four: '1234' },
+      email: 'user@example.com',
+      euuid: 'mock-euuid',
+      first_name: 'POC',
+      last_name: 'User',
+      phone: '',
+      state: '',
+      tax_id: '',
+      zip: '',
+    });
+    queryClient.setQueryData(accountQueries.settings.queryKey, {
+      backups_enabled: false,
+      longview_subscription: null,
+      managed: false,
+      network_helper: true,
+      object_storage: 'active',
+    });
+    queryClient.setQueryData(profileQueries.profile().queryKey, {
+      authorized_keys: [],
+      email: 'user@example.com',
+      email_notifications: true,
+      ip_whitelist_enabled: false,
+      lish_auth_method: 'keys_only',
+      referrals: { code: '', completed: 0, credit: 0, pending: 0, total: 0, url: '' },
+      restricted: false,
+      timezone: 'America/New_York',
+      two_factor_auth: false,
+      uid: 12345,
+      username: 'poc-user',
+      verified_phone_number: null,
+      authentication_type: 'password',
+    });
+    queryClient.setQueryData(profileQueries.preferences.queryKey, {
+      collapsedSideNavProductFamilies: [],
+    });
+    setIsLoading(false);
   }, []);
-
-  /**
-   * We make a series of requests for data on app load. The flow is:
-   * 1. App begins load; users see splash screen
-   * 2. Initial requests (in makeInitialRequests) are made (account, profile, etc.)
-   * 3. Initial requests complete; app is marked as done loading
-   */
-  const makeInitialRequests = async () => {
-    // When loading Lish we avoid all this extra data loading
-    if (window.location?.pathname?.match(/linodes\/[0-9]+\/lish/)) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Initial Requests: Things we want immediately (before rendering the app)
-      await Promise.all([
-        queryClient.prefetchQuery(accountQueries.account),
-        queryClient.prefetchQuery(accountQueries.settings),
-        queryClient.prefetchQuery(profileQueries.profile()),
-        queryClient.prefetchQuery(profileQueries.preferences),
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return { isLoading };
 };

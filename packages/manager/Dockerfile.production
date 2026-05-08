@@ -1,0 +1,55 @@
+# Stage 1: Build the application
+FROM node:22-slim AS builder
+
+WORKDIR /app
+
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
+RUN npm install -g pnpm@10
+
+# Copy workspace config and lockfile first for layer caching
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/api-v4/package.json packages/api-v4/
+COPY packages/manager/package.json packages/manager/
+COPY packages/queries/package.json packages/queries/
+COPY packages/search/package.json packages/search/
+COPY packages/shared/package.json packages/shared/
+COPY packages/tsconfig/package.json packages/tsconfig/
+COPY packages/ui/package.json packages/ui/
+COPY packages/utilities/package.json packages/utilities/
+COPY packages/validation/package.json packages/validation/
+COPY scripts/package.json scripts/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY packages/ packages/
+COPY scripts/ scripts/
+
+# Build args for environment variables baked into the static bundle
+ARG REACT_APP_CLIENT_ID
+ARG REACT_APP_LOGIN_ROOT
+ARG REACT_APP_API_ROOT
+ARG REACT_APP_APP_ROOT
+ARG REACT_APP_LAUNCH_DARKLY_ID
+ARG REACT_APP_SENTRY_URL
+ARG REACT_APP_ALGOLIA_APPLICATION_ID
+ARG REACT_APP_ALGOLIA_SEARCH_KEY
+ARG REACT_APP_ADOBE_ANALYTICS_URL
+ARG REACT_APP_PAYPAL_CLIENT_ID
+ARG REACT_APP_GPAY_ENV
+ARG REACT_APP_GPAY_MERCHANT_ID
+ARG REACT_APP_STATUS_PAGE_URL
+
+# Build all dependencies then manager
+RUN pnpm build
+
+# Stage 2: Serve with nginx
+FROM nginx:1.25-alpine
+
+COPY packages/manager/nginx.conf /etc/nginx/nginx.conf
+COPY --from=builder /app/packages/manager/build/ /usr/share/nginx/html/
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]

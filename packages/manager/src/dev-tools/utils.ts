@@ -35,10 +35,11 @@ import type {
 /**
  * Whether MSW is enabled via local storage setting.
  *
- * `true` if MSW is enabled, `false` otherwise.
+ * Defaults to enabled for the prototype. Set the local storage value to
+ * 'disabled' to opt out.
  */
 export const isMSWEnabled =
-  localStorage.getItem(LOCAL_STORAGE_KEY) === 'enabled';
+  localStorage.getItem(LOCAL_STORAGE_KEY) !== 'disabled';
 
 /**
  * Saves MSW enabled or disabled state to local storage.
@@ -69,14 +70,42 @@ export const saveBaselinePreset = (presetId: MockPresetBaselineId): void => {
 };
 
 /**
- * Retrieves the seeding count map from local storage.
+ * Default per-seeder counts used when the user has not customized them in the
+ * dev tools. Tuned for the prototype so every page loads with at least a small
+ * amount of representative data.
+ */
+const DEFAULT_SEEDS_COUNT_MAP: { [key: string]: number } = {
+  'cloudnats:crud': 2,
+  'domains:crud': 3,
+  'firewalls:crud': 2,
+  'ip-addresses:crud': 4,
+  'kubernetes:crud': 2,
+  'linodes:crud': 5,
+  'locks:crud': 1,
+  'nodebalancers:crud': 2,
+  'placement-groups:crud': 2,
+  'reserved-ips:crud': 2,
+  'support-tickets:crud': 2,
+  'users(default):crud': 1,
+  'users(parent):crud': 0,
+  'volumes:crud': 3,
+  'vpcs:crud': 2,
+};
+
+/**
+ * Retrieves the seeding count map from local storage, falling back to the
+ * prototype defaults so the app loads populated on first run.
  */
 export const getSeedsCountMap = (): { [key: string]: number } => {
   const encodedCountMap = localStorage.getItem(
     LOCAL_STORAGE_SEEDS_COUNT_MAP_KEY
   );
 
-  return encodedCountMap ? JSON.parse(encodedCountMap) : {};
+  if (!encodedCountMap) {
+    return { ...DEFAULT_SEEDS_COUNT_MAP };
+  }
+
+  return { ...DEFAULT_SEEDS_COUNT_MAP, ...JSON.parse(encodedCountMap) };
 };
 
 /**
@@ -141,13 +170,13 @@ export const saveExtraPresets = (presets: string[]) => {
 /**
  * Returns an array of enabled context seeders that are stored in local storage.
  *
- * An empty array is returned when the expected data does not exist in local
- * storage.
+ * For prototype mode, when nothing has been stored we enable every available
+ * seeder so the app boots populated rather than empty.
  */
 export const getSeeders = (dbSeeders: MockSeeder[]): string[] => {
   const encodedPopulators = localStorage.getItem(LOCAL_STORAGE_SEEDERS_KEY);
   if (!encodedPopulators) {
-    return [];
+    return dbSeeders.map((seeder) => seeder.id);
   }
   const storedSeeders = encodedPopulators.split(',');
 

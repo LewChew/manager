@@ -1,0 +1,26 @@
+.git
+node_modules
+**/node_modules
+**/build
+**/dist
+**/coverage
+.env
+.env.*
+**/.env
+**/.env.*
+*.log
+.vscode
+.idea
+.DS_Store
+
+# Cypress artifacts
+packages/manager/cypress/screenshots
+packages/manager/cypress/videos
+packages/manager/cypress/downloads
+
+# Yarn (legacy)
+.pnp.cjs
+.pnp.loader.mjs
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz

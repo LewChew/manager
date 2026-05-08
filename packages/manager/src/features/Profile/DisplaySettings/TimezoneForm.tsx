@@ -7,7 +7,6 @@ import * as React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { timezones } from 'src/assets/timezones/timezones';
-import { getIsLoggedInAsCustomer } from 'src/OAuth/oauth';
 
 import type { Profile } from '@linode/api-v4';
 
@@ -40,7 +39,8 @@ const timezoneOptions = getTimezoneOptions();
 type Values = Pick<Profile, 'timezone'>;
 
 export const TimezoneForm = () => {
-  const isLoggedInAsCustomer = getIsLoggedInAsCustomer();
+  // POC mode: no auth, so the "logged in as customer" notice never renders.
+  const isLoggedInAsCustomer = false;
   const { enqueueSnackbar } = useSnackbar();
   const { data: profile } = useProfile();
   const { mutateAsync: updateProfile } = useMutateProfile();

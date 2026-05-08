@@ -8,12 +8,6 @@ import { ErrorComponent } from 'src/features/ErrorBoundary/ErrorComponent';
 import { accountRouteTree } from './account';
 import { accountSettingsRouteTree, settingsRouteTree } from './accountSettings';
 import { cloudPulseAlertsRouteTree } from './alerts';
-import {
-  cancelLandingRoute,
-  loginAsCustomerCallbackRoute,
-  logoutRoute,
-  oauthCallbackRoute,
-} from './auth';
 import { betaRouteTree } from './betas';
 import { billingRouteTree } from './billing';
 import { databasesRouteTree } from './databases';
@@ -60,10 +54,6 @@ const indexRoute = createRoute({
 export const routeTree = rootRoute.addChildren([
   indexRoute,
   accountSettingsRouteTree,
-  cancelLandingRoute,
-  loginAsCustomerCallbackRoute,
-  logoutRoute,
-  oauthCallbackRoute,
   accountRouteTree,
   billingRouteTree,
   betaRouteTree,

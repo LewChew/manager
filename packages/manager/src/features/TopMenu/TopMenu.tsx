@@ -7,12 +7,10 @@ import { AppBar } from 'src/components/AppBar';
 import { Link } from 'src/components/Link';
 import { StyledAkamaiLogo } from 'src/components/PrimaryNav/PrimaryNav.styles';
 import { Toolbar } from 'src/components/Toolbar';
-import { getIsLoggedInAsCustomer } from 'src/OAuth/oauth';
 
 import { Community } from './Community';
 import { CreateMenu } from './CreateMenu/CreateMenu';
 import { Help } from './Help';
-import { InternalAdminBanner } from './InternalAdminBanner';
 import { NotificationMenu } from './NotificationMenu/NotificationMenu';
 import { SearchBar } from './SearchBar/SearchBar';
 import { TopMenuTooltip } from './TopMenuTooltip';
@@ -34,9 +32,7 @@ export interface TopMenuProps {
  * - The number of items should be limited. In the future, **Help & Support** could become a drop down with links to **Community**, **Guides**, and etc.
  */
 export const TopMenu = React.memo((props: TopMenuProps) => {
-  const { openSideMenu, username } = props;
-
-  const isLoggedInAsCustomer = getIsLoggedInAsCustomer();
+  const { openSideMenu } = props;
 
   const isNarrowViewport = useMediaQuery((theme: Theme) =>
     theme.breakpoints.down(960)
@@ -47,7 +43,6 @@ export const TopMenu = React.memo((props: TopMenuProps) => {
 
   return (
     <>
-      {isLoggedInAsCustomer && <InternalAdminBanner username={username} />}
       <AppBar data-qa-appbar>
         <Toolbar variant="dense">
           {isNarrowViewport && (

@@ -1,0 +1,72 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+    branches: [master]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-manager/manager
+
+    steps:
+      - name: Checkout at CI-validated SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f packages/manager/Dockerfile.production \
+            --build-arg REACT_APP_CLIENT_ID=${{ secrets.REACT_APP_CLIENT_ID }} \
+            --build-arg REACT_APP_LOGIN_ROOT=${{ secrets.REACT_APP_LOGIN_ROOT }} \
+            --build-arg REACT_APP_API_ROOT=${{ secrets.REACT_APP_API_ROOT }} \
+            --build-arg REACT_APP_APP_ROOT=${{ secrets.REACT_APP_APP_ROOT }} \
+            --build-arg REACT_APP_LAUNCH_DARKLY_ID=${{ secrets.REACT_APP_LAUNCH_DARKLY_ID }} \
+            --build-arg REACT_APP_SENTRY_URL=${{ secrets.REACT_APP_SENTRY_URL }} \
+            --build-arg REACT_APP_ALGOLIA_APPLICATION_ID=${{ secrets.REACT_APP_ALGOLIA_APPLICATION_ID }} \
+            --build-arg REACT_APP_ALGOLIA_SEARCH_KEY=${{ secrets.REACT_APP_ALGOLIA_SEARCH_KEY }} \
+            --build-arg REACT_APP_ADOBE_ANALYTICS_URL=${{ secrets.REACT_APP_ADOBE_ANALYTICS_URL }} \
+            --build-arg REACT_APP_PAYPAL_CLIENT_ID=${{ secrets.REACT_APP_PAYPAL_CLIENT_ID }} \
+            --build-arg REACT_APP_GPAY_ENV=${{ secrets.REACT_APP_GPAY_ENV }} \
+            --build-arg REACT_APP_GPAY_MERCHANT_ID=${{ secrets.REACT_APP_GPAY_MERCHANT_ID }} \
+            --build-arg REACT_APP_STATUS_PAGE_URL=${{ secrets.REACT_APP_STATUS_PAGE_URL }} \
+            -t ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha }} \
+            -t ${{ env.IMAGE }}:latest \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: cloud-manager
+          region: ${{ secrets.GCP_REGION }}
+          image: ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha }}
+          flags: --memory=256Mi --port=8080 --allow-unauthenticated

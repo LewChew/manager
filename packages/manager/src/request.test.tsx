@@ -1,7 +1,6 @@
 import { profileFactory } from '@linode/utilities';
 import { AxiosHeaders } from 'axios';
 
-import { setAuthDataInLocalStorage } from './OAuth/oauth';
 import {
   getURL,
   handleError,
@@ -9,7 +8,6 @@ import {
   injectEuuidToProfile,
 } from './request';
 import { storeFactory } from './store';
-import { storage } from './utilities/storage';
 
 import type { LinodeError } from './request';
 import type { APIError } from '@linode/api-v4';
@@ -43,20 +41,9 @@ const error400: AxiosError<LinodeError> = {
   },
 };
 
-describe('Expiring Tokens', () => {
-  it('should just promise reject if a non-401 error', () => {
-    setAuthDataInLocalStorage({
-      expires: 'never',
-      scopes: '*',
-      token: 'helloworld',
-    });
-
+describe('handleError', () => {
+  it('rejects with the API error reasons array', () => {
     const result = handleError(error400, store);
-
-    expect(storage.authentication.token.get()).toEqual('helloworld');
-    expect(storage.authentication.expire.get()).toEqual('never');
-    expect(storage.authentication.scopes.get()).toEqual('*');
-
     result.catch((e: APIError[]) =>
       expect(e[0].reason).toMatch(mockAxiosError.response.data.errors[0].reason)
     );

@@ -23,8 +23,13 @@ import { customUserEntityPermissionsPreset } from './extra/userPermissions/custo
 
 import type { MockPresetBaseline, MockPresetExtra } from '../types';
 
-/** The preset that we fall back on if the local storage value is unset or invalid. */
-export const defaultBaselineMockPreset = baselineNoMocksPreset;
+/**
+ * The preset that we fall back on if the local storage value is unset or invalid.
+ *
+ * For prototype mode we default to the CRUD preset so the app boots with full
+ * mocked data instead of empty endpoints.
+ */
+export const defaultBaselineMockPreset = baselineCrudPreset;
 
 /** Baseline mock presets get applied before all other presets, and one must be selected. */
 export const baselineMockPresets: MockPresetBaseline[] = [

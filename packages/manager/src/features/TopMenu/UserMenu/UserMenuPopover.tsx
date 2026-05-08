@@ -111,7 +111,6 @@ export const UserMenuPopover = (props: UserMenuPopoverProps) => {
       display: 'Referrals',
       to: '/profile/referrals',
     },
-    { display: 'Log Out', to: '/logout' },
   ];
 
   // Used for fetching parent profile and account data by making a request with the parent's token.

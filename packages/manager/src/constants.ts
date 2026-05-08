@@ -5,10 +5,11 @@ import { getBooleanEnv } from '@linode/utilities';
 // For example, cloud.dev.linode.com is technically a production build.
 export const isProductionBuild = import.meta.env.PROD;
 
-// allow us to explicity enable dev tools
+// Dev tools (which include MSW) drive the prototype's mocked data, so they are
+// enabled by default in every build. Set REACT_APP_ENABLE_DEV_TOOLS=false to opt out.
 export const ENABLE_DEV_TOOLS =
   import.meta.env.REACT_APP_ENABLE_DEV_TOOLS === undefined
-    ? import.meta.env.DEV
+    ? true
     : getBooleanEnv(import.meta.env.REACT_APP_ENABLE_DEV_TOOLS);
 
 // allow us to explicity enable maintenance mode
