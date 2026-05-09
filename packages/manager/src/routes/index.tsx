@@ -4,6 +4,7 @@ import { createRoute, createRouter, redirect } from '@tanstack/react-router';
 import React from 'react';
 
 import { ErrorComponent } from 'src/features/ErrorBoundary/ErrorComponent';
+import { isSignupComplete } from 'src/features/Signup/signupStorage';
 
 import { accountRouteTree } from './account';
 import { accountSettingsRouteTree, settingsRouteTree } from './accountSettings';
@@ -35,6 +36,7 @@ import { reservedIpsRouteTree } from './reservedIps';
 import { rootRoute } from './root';
 import { searchRouteTree } from './search';
 import { serviceTransfersRouteTree } from './serviceTransfers';
+import { signupRoute } from './signup';
 import { stackScriptsRouteTree } from './stackscripts';
 import { supportRouteTree } from './support';
 import { usersAndGrantsRouteTree } from './usersAndGrants';
@@ -43,6 +45,9 @@ import { vpcsRouteTree } from './vpcs';
 
 const indexRoute = createRoute({
   beforeLoad: ({ context }) => {
+    if (!isSignupComplete()) {
+      throw redirect({ to: '/signup' });
+    }
     const { accountSettings } = context;
     const defaultRoot = accountSettings?.managed ? '/managed' : '/linodes';
     throw redirect({ to: defaultRoot });
@@ -83,6 +88,7 @@ export const routeTree = rootRoute.addChildren([
   searchRouteTree,
   serviceTransfersRouteTree,
   settingsRouteTree,
+  signupRoute,
   stackScriptsRouteTree,
   supportRouteTree,
   usersAndGrantsRouteTree,
