@@ -1,10 +1,9 @@
 name: deploy
 
 on:
-  workflow_run:
-    workflows: ["ci"]
-    types: [completed]
+  push:
     branches: [master]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-production
@@ -12,7 +11,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,10 +20,8 @@ jobs:
       IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-manager/manager
 
     steps:
-      - name: Checkout at CI-validated SHA
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Authenticate to Google Cloud
         id: auth
@@ -54,13 +50,13 @@ jobs:
             --build-arg REACT_APP_GPAY_ENV=${{ secrets.REACT_APP_GPAY_ENV }} \
             --build-arg REACT_APP_GPAY_MERCHANT_ID=${{ secrets.REACT_APP_GPAY_MERCHANT_ID }} \
             --build-arg REACT_APP_STATUS_PAGE_URL=${{ secrets.REACT_APP_STATUS_PAGE_URL }} \
-            -t ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha }} \
+            -t ${{ env.IMAGE }}:${{ github.sha }} \
             -t ${{ env.IMAGE }}:latest \
             .
 
       - name: Push Docker image
         run: |
-          docker push ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha }}
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
           docker push ${{ env.IMAGE }}:latest
 
       - name: Deploy to Cloud Run
@@ -68,5 +64,5 @@ jobs:
         with:
           service: cloud-manager
           region: ${{ secrets.GCP_REGION }}
-          image: ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha }}
+          image: ${{ env.IMAGE }}:${{ github.sha }}
           flags: --memory=256Mi --port=8080 --allow-unauthenticated
